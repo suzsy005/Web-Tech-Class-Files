@@ -1,46 +1,181 @@
-﻿@model SelectList
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+
+@model SelectList
 
 @{
-	ViewBag.Title = "Sales Report";
+    ViewBag.Title = "Annual Sales Report";
 }
-<div>
+
 <h2>
-AnnualSalesReport.cshtml
+    Annual Sales Report
 </h2>
-</div>
 
 <div class="row my-3">
-
-	<div class="col-2">
-		<select id="reportSelect" name="year" asp-items="Model" class="form-control">
-			<option value="">Select...</option>
-		</select>
-	</div>
-
-	<ul id="itemList"></ul>
-
+    <div class="col-2">
+        <select id="reportSelect" name="year" asp-items="Model" class="form-control">
+            <option value="">Select...</option>
+        </select>
+    </div>
+    <ul id="itemList"></ul>
 </div>
 
-<script>
-	// added EvemtListener which changes the year value when I changed the year in the dropdown list
-	document.querySelector('#reportSelect').addEventListener('change', (event) => {
-	let year = event.target.value;
-	
-	// if statement to exclude the "Select..." in dropdown list
-	if (year.length > 0){
-		// sends request to controller(AnnualSalesReportData method in ReportsController)
-		fetch(`/Reports/AnnualSalesReportData?year=${year}`)
-		.then(response => response.json())
-		.then(data => {
-					let ul = document.querySelector('#itemList');  // find itemList
-						ul.replaceChildren();
-						data.forEach(c => {  // for each Json row
-						let li = document.createElement("li");  // creates the list of items
-						console.log(c);
-						li.innerText = JSON.stringify(c);  // turns this into the string so I can read
-						ul.appendChild(li);
-					})
-	})
-}})
+<div>
+    <svg width="100%" height="400px" class="border border-primary rounded p-2"></svg>
+</div>
 
-</script>
+@section scripts {
+    <script type="module">
+		// 3. Select list Event Listener
+		// added EvemtListener which changes the year value when I changed the year in the dropdown list
+		document.querySelector('#reportSelect').addEventListener('change', (event) => {
+			let year = event.target.value;
+			// if statement to exclude the "Select..." in dropdown list
+			if (year.length > 0) {
+				fetch(`/Reports/AnnualSalesReportData?year=${year}`)
+				.then(response => response.json())
+				.then(data => {
+				    let ul = document.querySelector('#itemList');  // find itemList
+					ul.replaceChildren();
+					data.forEach(c => {  // for each Json row
+					let li = document.createElement("li");  // creates the list of items
+					li.innerText = JSON.stringify(c);  // turns this into the string so I can read
+					ul.appendChild(li);
+							})
+					buildGraph(data);
+			    })
+            }
+		})
+
+    import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+    // D3 code goes here
+    // 1. select SVG element
+    const svg = d3.select('svg');
+
+    // 2. determine the size of the SVG element
+    let w = svg.node().getBoundingClientRect().width;
+    let h = svg.node().getBoundingClientRect().height;
+
+    console.log('Width: ' + w);
+    console.log('height: ' + h);
+
+    // 12 Chart Margins
+    const chartMargins = {
+        left: 40,
+        right: 25,
+        top: 25,
+        bottom: 80
+    }
+
+    w = w - (chartMargins.left + chartMargins.right);
+    h = h - (chartMargins.top + chartMargins.bottom);
+
+    function buildGraph(dataSet) {
+
+        svg.selectAll("*").remove();
+
+        console.log(dataSet);
+        // Build Graph here
+
+        // 4.1 calculate the maximum value to be displayed
+        let totalItemsRange = d3.extent(dataSet, (d, i) => d.totalItems);
+        let maxTotalItems = totalItemsRange[1];
+
+        console.log("Max totalItems: " + maxTotalItems);
+
+        // 4.2 calculating the bar dimentions
+        const barMargin = 10;
+        const barWidth = w / dataSet.length;
+
+        // 8. Create a yScale
+		let yScale = d3.scaleLinear()
+			.domain([0, maxTotalItems])
+			.range([h, 0]);
+
+        // 10. implement xScale
+		let monthArray = Array.from(dataSet, (d, i) => d.monthName);
+		console.log(`Month array: ${monthArray}`)
+
+		let xScale = d3.scaleBand()
+		.domain(monthArray)
+		.range([0, w])
+		.paddingInner(0.1)
+
+        // example xScale test;
+		console.log(`xScale: ${xScale('January')}`)
+
+
+        // 12.4 create chartGroup element
+		const chartGroup = svg.append('g')
+		.classed('chartGroup', true)
+		.attr('transform', `translate(${chartMargins.left},${chartMargins.top})`);
+
+
+
+        // 5. select all 'g' elements and bind the dataSet
+        // 12.4 append the barGroup to the chartGroup
+        let barGroups = chartGroup
+            .selectAll('.bar-group')
+            .data(dataSet);
+
+        // 6. add new bar groups
+        let newBarGroups = barGroups.enter()
+            .append('g')
+            .classed('bar-group', true)
+            .attr('transform', d => `translate(${xScale(d.monthName)},${yScale(d.totalItems)})`);; // end tranform
+
+
+        // 7. append new rectangles
+        // 15. Adding Color and Animations
+		newBarGroups
+		.append('rect')
+        .attr('x', 0) // optional line that can be left out since 0 is the default
+		//.attr('height', d => h - yScale(d.totalItems))
+		.attr('height', 0)
+		.attr('y', d => h - yScale(d.totalItems))
+		.attr('width', xScale.bandwidth())
+		.attr('fill', 'transparent')
+		.transition().duration((_, i) => i * 500)
+		.delay((_, i) => i + 200)
+		.attr('y', 0)
+		.attr('height', d => h - yScale(d.totalItems))
+		.attr('fill', (_, i) => `rgb(20,20, ${i * 15 + 80})`)
+
+
+		// 11. create the y axis and add it to the svg
+        // 12.5 append the y-Axis to the chartGroup
+		let yAxis = d3.axisLeft(yScale);
+		chartGroup.append('g')
+		.classed('axis y', true)
+		.call(yAxis);
+
+        // 13. append the x-Axis to the chartGroup
+		let xAxis = d3.axisBottom(xScale)
+		chartGroup.append('g')
+        .attr('transform', `translate(0,${h})`)
+		.classed('axis x', true)
+		.call(xAxis);
+
+        // 13.4 rotate labels
+		chartGroup.selectAll('.axis.x text')
+		.attr('transform', 'rotate(-70)')
+		.attr('dx', '-0.8em')
+		.attr('dy', '0.25em')
+		.style('text-anchor', 'end')
+		.style('font-size', '0.9em')
+
+        // 14. create Bar text
+		newBarGroups
+		.append('text')
+		.attr('text-anchor', 'middle')
+		.attr('x', d => xScale.bandwidth() / 2)
+		.attr('y', 20)
+		.attr('fill', 'white')
+		.style('font-size', '1em')
+		.text(d => d.totalItems.toLocaleString());
+
+    }
+    </script>
+}
