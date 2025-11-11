@@ -15,12 +15,15 @@ namespace AOWebApp.Controllers
         }
         public IActionResult Index()
         {
-
+            // selects all the years where customerOrders are made
             var YearList = _context.CustomerOrders.Select(i => i.OrderDate.Year).Distinct().OrderBy(i => i);
 
+            // returns "AnnualSalesReport" page, not the Index page AND dropdown list of all the years
             return View("AnnualSalesReport", new SelectList(YearList));
         }
 
+        // when click one of the year in the dropdown list, which hits this method
+        // does the filtering and fetch rows that needs to do from the database
         [Produces("application/json")]
         public IActionResult AnnualSalesReportData(int? year)
         {

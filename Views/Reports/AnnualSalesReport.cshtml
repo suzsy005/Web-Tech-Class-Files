@@ -22,21 +22,22 @@ AnnualSalesReport.cshtml
 </div>
 
 <script>
-
-document.querySelector('#reportSelect').addEventListener('change', (event) => {
+	// added EvemtListener which changes the year value when I changed the year in the dropdown list
+	document.querySelector('#reportSelect').addEventListener('change', (event) => {
 	let year = event.target.value;
 	
-
+	// if statement to exclude the "Select..." in dropdown list
 	if (year.length > 0){
+		// sends request to controller(AnnualSalesReportData method in ReportsController)
 		fetch(`/Reports/AnnualSalesReportData?year=${year}`)
 		.then(response => response.json())
 		.then(data => {
-					let ul = document.querySelector('#itemList');
-							ul.replaceChildren();
-						data.forEach(c => {
-						let li = document.createElement("li");
+					let ul = document.querySelector('#itemList');  // find itemList
+						ul.replaceChildren();
+						data.forEach(c => {  // for each Json row
+						let li = document.createElement("li");  // creates the list of items
 						console.log(c);
-							li.innerText = JSON.stringify(c);
+						li.innerText = JSON.stringify(c);  // turns this into the string so I can read
 						ul.appendChild(li);
 					})
 	})
