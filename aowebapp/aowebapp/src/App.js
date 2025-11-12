@@ -1,5 +1,6 @@
 import './App.css';
 import Card from './componets/Card'
+import CardList from './componets/CardList'
 import CardV2 from './componets/CardV2'
 import CardV3 from './componets/CardV3'
 
@@ -32,6 +33,7 @@ function App() {
                   itemCost="5.00"
               />
           </div>
+          <CardList />
     </div>
   );
 }
